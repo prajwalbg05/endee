@@ -1,0 +1,4 @@
+Retrieval Augmented Generation is a technique used in modern AI systems.
+It combines vector search with language models to improve factual accuracy.
+Vector databases store dense embeddings instead of raw text.
+Endee is a vector database designed for fast semantic similarity search.

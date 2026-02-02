@@ -1,22 +1,14 @@
+# Python virtual environment
+venv/
 
-# Ignore build directory
-build/
-# Ignore build like directory
-build*/
-# Ignore all files in the build directory
-build/*
+# Python cache
+__pycache__/
+*.pyc
 
-# Ignore tests build directory
-tests/build/
+# Generated vectors & queries
+data/vectors.json
+data/query_vector.json
+query_vector.json
 
-# Sometimes data files are created for tetsing
-data/
-data/*
-
-# VS Code directory
-.vscode/
-.vscode/*
-
-# Frontend
-frontend/
-frontend/*
+# HuggingFace / model cache
+.cache/
