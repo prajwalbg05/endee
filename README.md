@@ -1,4 +1,5 @@
 **Endee-based Retrieval Augmented Generation (RAG) System**
+
 Project Overview & Problem Statement
 Overview
 
@@ -26,6 +27,7 @@ Generating answers strictly from retrieved information
 Endee is used as the core vector search engine that enables this workflow.
 
 **System Design / Technical Approach**
+
 High-Level Architecture
 
 Documents
@@ -172,20 +174,23 @@ Prepares vectors for insertion into Endee
 Vectors are inserted using a clipboard-assisted helper:
 
 python app/clipboard_ingest.py
+(a automated vector copying model)
 
 Step 6: Run the RAG Pipeline
 python app/rag.py
 
-Sample Output
+
+**Sample Output
 Query: What is Endee used for?
 
 Answer:
 fast semantic similarity search
-
+**
 
 This confirms correct semantic retrieval and grounded answer generation.
 
 AI Assistance Disclosure
+
 
 This project was developed with the assistance of ChatGPT as a learning and productivity tool.
 ChatGPT was used for:
