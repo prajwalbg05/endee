@@ -1,204 +1,183 @@
-**Endee-based Retrieval Augmented Generation (RAG) System**
+# Endee-based Retrieval Augmented Generation (RAG) System
 
-Project Overview & Problem Statement
-Overview
+A compact, production-oriented Retrieval-Augmented Generation (RAG) system that uses Endee as the vector database to provide grounded, explainable answers from domain documents.
 
-This project implements a Retrieval Augmented Generation (RAG) system using Endee as the vector database.
-The system enables semantic search over documents and generates answers that are grounded in retrieved context, rather than relying solely on a language model.
+---
 
-Problem Statement
+## Table of Contents
+- [Overview](#overview)
+- [Problem Statement](#problem-statement)
+- [Solution Summary](#solution-summary)
+- [High-Level Architecture](#high-level-architecture)
+- [Technical Components](#technical-components)
+- [Setup & Execution](#setup--execution)
+- [Usage Example](#usage-example)
+- [Notes & Limitations](#notes--limitations)
+- [AI Assistance Disclosure](#ai-assistance-disclosure)
+- [Contributing](#contributing)
+- [License](#license)
 
-Large Language Models (LLMs) can generate fluent responses but often suffer from:
+---
 
-Hallucinations
+## Overview
 
-Lack of grounding in domain-specific data
+This project implements a Retrieval-Augmented Generation (RAG) pipeline where user queries are answered using text retrieved from a vector database (Endee). Instead of relying only on an LLM's internal knowledge, answers are grounded in semantically relevant document chunks stored in Endee.
 
-Outdated or missing knowledge
+## Problem Statement
 
-This project addresses these issues by:
+Large Language Models (LLMs) are powerful but commonly suffer from:
+- Hallucinations (confident but incorrect outputs)
+- Lack of grounding in private or domain-specific data
+- Outdated knowledge
 
-Retrieving relevant document chunks using vector similarity search
+This project mitigates these problems by retrieving relevant document content and generating answers strictly from the retrieved context.
 
-Augmenting the user query with retrieved context
+## Solution Summary
 
-Generating answers strictly from retrieved information
+- Chunk documents and create dense embeddings.
+- Store embeddings in Endee (vector DB).
+- Embed incoming queries and perform similarity search in Endee.
+- Assemble retrieved chunks as context and generate responses that are grounded in those chunks.
+- Optionally re-run retrieval with a refined query when confidence is low (lightweight agentic loop).
 
-Endee is used as the core vector search engine that enables this workflow.
-
-**System Design / Technical Approach**
-
-High-Level Architecture
+## High-Level Architecture
 
 Documents
-   ↓
+  ↓
 Text Chunking
-   ↓
-Embedding Generation (SentenceTransformer)
-   ↓
-Endee Vector Database
-   ↓
-Semantic Similarity Search
-   ↓
-Retrieved Context
-   ↓
-Answer Generation (RAG)
+  ↓
+Embedding (sentence-transformers: all-MiniLM-L6-v2)
+  ↓
+Endee vector DB (cosine similarity)
+  ↓
+Top-K retrieval
+  ↓
+RAG answer generation (QA model using retrieved context)
 
-**Technical Components**
+---
 
-Embedding Model
+## Technical Components
 
-Sentence-Transformers (all-MiniLM-L6-v2)
+### Embedding Model
+- Model: sentence-transformers/all-MiniLM-L6-v2
+- Output: 384-dimensional dense vectors
 
-Produces 384-dimensional dense vectors
+### Vector Database
+- Endee — stores vectors and performs cosine-similarity searches
+- Index recommended: name `documents`, dim `384`, metric `cosine`
 
-Vector Database
+### RAG Pipeline
+- Query → embedding → Endee top-K retrieval → pass retrieved text to QA model → answer generation constrained to retrieved content
 
-Endee stores embeddings
+### Lightweight Agentic Extension
+- Evaluate retrieval confidence using similarity scores
+- If confidence < threshold, optionally reformulate query and re-retrieve
+- This is a controlled decision loop (no open-ended autonomous actions)
 
-Performs cosine similarity search
+---
 
-RAG Pipeline
+## Setup & Execution
 
-User query is converted into an embedding
-
-Top-K similar vectors are retrieved from Endee
-
-Retrieved text is passed as context to a Question-Answering model
-
-Answer is generated strictly from retrieved content
-
-Lightweight Agentic Extension
-
-Similarity scores are evaluated
-
-If confidence is low, retrieval can be repeated with a refined query
-
-This introduces controlled, explainable decision-making without unstable autonomous loops
-
-Explanation of How Endee Is Used
-
-Endee acts as the primary vector database in this project.
-
-Ingestion Flow
-
-Raw documents are added
-
-Documents are split into smaller chunks
-
-Each chunk is converted into a dense embedding
-
-Embeddings are inserted into Endee
-
-Retrieval Flow
-
-User query is embedded
-
-Endee performs semantic similarity search
-
-Most relevant document chunks are retrieved
-
-Retrieved content is used by the RAG pipeline
-
-Note:
-At the time of implementation, Endee exposes vector search primarily through its UI.
-Retrieval is therefore demonstrated via the Endee interface and consumed by the application layer.
-This reflects real-world systems where public APIs may be limited or evolving.
-
-Setup & Execution Instructions
 Prerequisites
+- Ubuntu (WSL supported)
+- Python 3.10+
+- Git
+- Endee running locally
 
-Ubuntu (WSL supported)
-
-Python 3.10+
-
-Git
-
-Endee running locally
-
-Step 1: Start Endee
-
-Ensure the required data directory exists (important for WSL):
-
+1. Start Endee
+```bash
+# ensure WSL /mnt/data is available (if using WSL)
 sudo mkdir -p /mnt/data
 sudo chown -R $USER:$USER /mnt/data
-
-
-Start Endee:
 
 cd ~/endee
 ./build/ndd-avx2
 
+# Endee UI should be available at:
+# http://localhost:8080
+```
 
-Verify Endee UI:
+2. Create Index in Endee (via UI)
+- Index name: `documents`
+- Dimension: `384`
+- Distance metric: `cosine`
 
-http://localhost:8080
-
-Step 2: Create Index in Endee
-
-Using the Endee UI:
-
-Index name: documents
-
-Dimension: 384
-
-Distance metric: cosine
-
-Step 3: Set Up Python Environment
+3. Set up Python environment
+```bash
 cd ~/endee-rag-project
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+```
 
-Step 4: Add Documents
-
-Edit the document file:
-
+4. Add documents
+```bash
+# Add or edit documents to ingest
 nano data/docs.txt
+```
 
-
-Add sample text for ingestion.
-
-Step 5: Run Ingestion Pipeline
+5. Run ingestion pipeline (creates chunks, embeddings, and prepares vectors for Endee)
+```bash
 python app/ingest_pipeline.py
-
-
-This step:
-
-Chunks documents
-
-Generates embeddings
-
-Prepares vectors for insertion into Endee
-
-Vectors are inserted using a clipboard-assisted helper:
-
+```
+Note: Vectors are inserted using a clipboard-assisted helper:
+```bash
 python app/clipboard_ingest.py
-(a automated vector copying model)
+# (this automates copying prepared vectors into Endee's ingestion path)
+```
 
-Step 6: Run the RAG Pipeline
+6. Run the RAG pipeline
+```bash
 python app/rag.py
+```
 
+---
 
-**Sample Output
-Query: What is Endee used for?
+## Usage Example
 
-Answer:
-fast semantic similarity search
-**
+Query:
+```
+What is Endee used for?
+```
 
-This confirms correct semantic retrieval and grounded answer generation.
+Sample Answer (grounded in retrieved context):
+```
+Fast semantic similarity search
+```
 
-AI Assistance Disclosure
+This demonstrates retrieval of relevant document chunks and generating answers strictly from retrieved content.
 
+---
 
-This project was developed with the assistance of ChatGPT as a learning and productivity tool.
-ChatGPT was used for:
+## Notes & Limitations
 
-Understanding RAG architecture concepts
+- At implementation time, Endee exposes much of its vector search functionality primarily through its UI; programmatic APIs may be limited or evolving.
+- Ensure embeddings and index dimensions match (e.g., 384 for the specified embedding model).
+- The reliability of answers depends on the quality and coverage of the ingested documents.
+- For production, consider:
+  - Persistence and backups for Endee indices
+  - Monitoring recall/precision of retrieval
+  - Rate-limiting and secure access to any APIs
 
-Debugging environment and integration issues
+---
 
-Improving code structure and documentation clarity
+## AI Assistance Disclosure
 
-All implementation decisions, testing, debugging, and final integration were performed and validated by the author.
+This project was developed with assistance from ChatGPT used as a productivity and learning tool. ChatGPT helped with:
+- Explaining RAG architecture concepts
+- Troubleshooting integration issues
+- Improving structure and documentation clarity
+
+All code design, implementation, testing, and final decisions were performed and validated by the project author.
+
+---
+
+## Contributing
+
+Contributions, issues, and feature requests are welcome. Please open an issue or submit a PR describing the change. For small documentation improvements, feel free to propose edits directly.
+
+---
+
+## License
+
+Specify your license here (e.g., MIT). Add a LICENSE file to the repository if not present.
